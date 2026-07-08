@@ -2,7 +2,7 @@
 
 **Much of the world's information and services live behind websites built for people, not agents. WebSiteMCP is a specification to make them accessible to agents.**
 
-The actions people actually need, moving money, booking travel, filing a claim, checking an order, mostly live behind websites with no usable API. Meanwhile the Model Context Protocol (MCP) has become the common way to give agents tools, but it reaches APIs, not the human web. WebSiteMCP closes that gap by _describing_ a site's actions as MCP tools, instead of requiring the site to publish an API of its own.
+The actions people actually need, moving money, booking travel, filing a claim, checking an order, mostly live behind websites with no usable API. Meanwhile the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) has become the common way to give agents tools, but it reaches APIs, not the human web. WebSiteMCP closes that gap by _describing_ a site's actions as MCP tools, instead of requiring the site to publish an API of its own. A contract tool is shaped to match the MCP [`Tool`](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) object (`description`, `inputSchema`, `outputSchema`), so it compiles straight through.
 
 It is a specification, a set of JSON Schemas, for describing a human-facing site as a stable, versioned set of agent-callable MCP tools. The volatile part, how a given site actually works, is confined to a single replaceable layer, so a redesign is a behind-the-scenes republish and nothing an agent sees changes. That isolation is what makes an agent's use of a site reliable rather than brittle.
 
@@ -40,6 +40,8 @@ wire:     org_wikipedia_fr_search
 ```
 
 The 64-character budget is shared across the whole name (host + contract + tool), so keep each part short and abbreviate where you can. A name whose wire form would exceed 64 characters is invalid.
+
+Mind the host, especially: a single DNS label can be up to **63 characters**, which on its own nearly exhausts the 64-character budget and leaves no room for the contract and tool. The reverse-DNS host is usually several labels (`com.example.www`), so it typically dominates the name. Be judicious naming and abbreviating each part to preserve room in the shared tool namespace.
 
 ## Repository layout
 

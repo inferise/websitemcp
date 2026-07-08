@@ -1,6 +1,6 @@
 # WebSiteMCP, Specification 1.0
 
-WebSiteMCP, a specification for re-describing websites designed for human operation as structured, agent-callable tools in the shape of the Model Context Protocol (MCP).
+WebSiteMCP, a specification for re-describing websites designed for human operation as structured, agent-callable tools in the shape of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). A contract tool maps directly onto an MCP [`Tool`](https://modelcontextprotocol.io/specification/2025-06-18/server/tools).
 
 This document is the normative definition of the three artifacts and the rules that bind them. The accompanying JSON Schemas under `schema/1.0/` are the machine-readable form of these rules; where prose and schema disagree, the schema governs for structural validation and this document governs for intent. See `README.md` for the conceptual overview and motivation. Executing a binding, the runtime that drives a site, is out of scope; this spec defines only the description.
 
