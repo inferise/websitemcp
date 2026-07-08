@@ -2,29 +2,29 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://websitemcp.inferise.com/schema/1.0/binding.json",
   "title": "WebSiteMCP Binding",
-  "description": "Meta-schema for a WebSiteMCP binding: a recording that implements a contract's methods for one site. A binding is authored once by recording in-page input, output, and actions; it is the concrete, private, site-specific implementation of the contract. Lives at domain/<reverse-DNS path>/<contract>@<version>.json, beside the site's manifest. Part of WebSiteMCP spec version 1.0.",
+  "description": "The binding format: a recording that implements a contract's tools for one site, the private, site-specific how. Lives beside the site's manifest at domain/<reverse-DNS path>/<contract>@<version>.json.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "contract", "satisfiesContract", "version", "methods"],
+  "required": ["kind", "contract", "satisfiesContract", "version", "tools"],
   "properties": {
-    "$schema": { "type": "string" },
-    "kind": { "const": "binding", "description": "Artifact discriminator." },
+    "$schema": { "type": "string", "description": "Optional URL of the schema this file follows." },
+    "kind": { "const": "binding", "description": "Marks this file as a binding." },
     "contract": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*$",
-      "description": "Contract category this binding implements. Must match the filename stem before '@'."
+      "description": "Which contract this binding implements; matches the filename before `@`."
     },
     "satisfiesContract": {
       "$ref": "#/$defs/semver",
-      "description": "The exact contract version this recording implements. Must equal the manifest's pinned contract version."
+      "description": "The exact contract version this recording implements; must equal the manifest's pin."
     },
     "version": {
       "$ref": "#/$defs/semver",
-      "description": "Binding version. Bumps when the recording changes (redesign, relocator, flow fix). Free to move under a fixed satisfiesContract. Must match the '@<version>' in the filename."
+      "description": "The binding version; bump it whenever the recording changes. Matches `@<version>` in the filename."
     },
-    "methods": {
+    "tools": {
       "type": "object",
-      "description": "One recording per implemented method, keyed by method name. Keys must equal the manifest's declared methods for this contract.",
+      "description": "One recording per tool this site implements, keyed by tool id; these are the site's live tools.",
       "minProperties": 1,
       "propertyNames": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
       "additionalProperties": { "$ref": "#/$defs/recording" }
@@ -35,7 +35,7 @@
 
     "recording": {
       "type": "object",
-      "description": "The captured step sequence for one method, plus the error map applied during execution.",
+      "description": "The steps that carry out one tool, plus the rules that map page failures to contract errors.",
       "additionalProperties": false,
       "required": ["steps"],
       "properties": {
@@ -46,7 +46,7 @@
         },
         "errors": {
           "type": "array",
-          "description": "Maps recognized failure conditions to contract error codes. A raised code MUST be one of the codes declared for this method in the contract.",
+          "description": "Rules mapping a recognized page failure to one of the tool's contract error codes.",
           "items": { "$ref": "#/$defs/errorRule" }
         }
       }
@@ -54,33 +54,33 @@
 
     "step": {
       "type": "object",
-      "description": "One recorded action. The 'action' discriminator selects which fields apply.",
+      "description": "One recorded action; the `action` field selects which other fields apply.",
       "required": ["action"],
       "properties": {
         "action": {
           "enum": ["navigate", "click", "input", "select", "submit", "waitFor", "assert", "read"]
         },
-        "note": { "type": "string", "description": "Optional human label captured at record time." },
-        "url": { "type": "string", "description": "navigate: absolute or relative URL. May contain {{param}} tokens." },
+        "note": { "type": "string", "description": "Optional human label for the step, kept from recording time." },
+        "url": { "type": "string", "description": "Where to navigate; may contain {{token}} placeholders naming inputSchema properties." },
         "target": {
           "$ref": "#/$defs/locatorSet",
-          "description": "Ordered, multi-strategy locator for the element. Required for click/input/select/submit/read and for waitFor/assert when condition is selector-based."
+          "description": "Which element to act on, as an ordered list of fallback locators."
         },
         "value": {
           "type": "string",
-          "description": "input/select: the value to enter. Use {{paramName}} to inject a contract param (the only valid bind mechanism for inputs). Literal text is allowed for fixed values."
+          "description": "Text to type or option to pick; use a {{token}} naming an inputSchema property to inject a tool input."
         },
         "wait": {
           "$ref": "#/$defs/waitCondition",
-          "description": "waitFor: the synchronization condition. Also allowed on any step as a pre-condition to satisfy before the step runs."
+          "description": "A condition to satisfy before this step runs (or the whole point of a `waitFor` step)."
         },
         "assert": {
           "$ref": "#/$defs/assertion",
-          "description": "assert: condition that must hold, else the step fails (and may map to an error)."
+          "description": "A condition that must hold, or the step fails."
         },
         "extract": {
           "$ref": "#/$defs/extraction",
-          "description": "read: pull a value from the page into a named return field (the output side of the bind map)."
+          "description": "Reads a value from the page into a named result field."
         }
       },
       "allOf": [
@@ -102,7 +102,7 @@
       "properties": {
         "locators": {
           "type": "array",
-          "description": "Candidate locators in priority order. Replay tries each in turn until one resolves to a unique element. Order from most resilient (role/testid) to most brittle (css/xpath).",
+          "description": "Fallback locators tried in order until one matches a unique element; list them most-resilient first (role/testid) to most brittle (css/xpath).",
           "minItems": 1,
           "items": { "$ref": "#/$defs/locator" }
         }
@@ -116,15 +116,15 @@
       "properties": {
         "strategy": {
           "enum": ["role", "testid", "label", "text", "css", "xpath"],
-          "description": "role=ARIA role; testid=stable test attribute; label=associated form label; text=visible text; css/xpath=raw selectors."
+          "description": "How to find the element: ARIA role, test attribute, form label, visible text, or a raw css/xpath selector."
         },
         "value": {
           "type": "string",
-          "description": "Selector or value for the chosen strategy (e.g. role -> 'button', css -> '#amount')."
+          "description": "The selector or value for the chosen strategy (e.g. css `#amount`)."
         },
         "name": {
           "type": "string",
-          "description": "Accessible name / additional qualifier (e.g. role 'button' name 'Transfer money')."
+          "description": "Extra qualifier, such as an element's accessible name."
         }
       }
     },
@@ -136,11 +136,11 @@
       "properties": {
         "type": {
           "enum": ["selector", "selectorGone", "url", "networkIdle", "timeout"],
-          "description": "selector=element present; selectorGone=element removed; url=location matches; networkIdle=no in-flight requests; timeout=fixed delay."
+          "description": "What to wait on: an element appearing or disappearing, a URL match, network idle, or a fixed delay."
         },
-        "target": { "$ref": "#/$defs/locatorSet", "description": "Element for selector / selectorGone." },
-        "url": { "type": "string", "description": "URL or pattern for type 'url'. May contain {{param}} tokens." },
-        "timeoutMs": { "type": "integer", "minimum": 0, "description": "Max wait (or fixed delay for type 'timeout'). Exceeding it is a failure." }
+        "target": { "$ref": "#/$defs/locatorSet", "description": "The element to wait on, for `selector` / `selectorGone`." },
+        "url": { "type": "string", "description": "The URL or pattern to wait for, for type `url`; may contain {{token}} placeholders naming inputSchema properties." },
+        "timeoutMs": { "type": "integer", "minimum": 0, "description": "How long to wait before failing (or the delay, for type `timeout`)." }
       }
     },
 
@@ -153,7 +153,7 @@
           "enum": ["visible", "absent", "textEquals", "textContains", "urlMatches"]
         },
         "target": { "$ref": "#/$defs/locatorSet" },
-        "value": { "type": "string", "description": "Expected text/url; may contain {{param}} tokens." }
+        "value": { "type": "string", "description": "The expected text or URL to check; may contain {{token}} placeholders naming inputSchema properties." }
       }
     },
 
@@ -164,16 +164,16 @@
       "properties": {
         "field": {
           "type": "string",
-          "description": "Return-schema property this value populates. MUST be a property of the method's contract 'returns'."
+          "description": "Which result field this value fills; must be one of the tool's returns."
         },
         "from": {
           "enum": ["text", "value", "attribute"],
-          "description": "Where to read: visible text, form value, or an attribute."
+          "description": "Where on the element to read: its visible text, form value, or an attribute."
         },
-        "attribute": { "type": "string", "description": "Attribute name when from='attribute'." },
+        "attribute": { "type": "string", "description": "Which attribute to read, when `from` is `attribute`." },
         "as": {
           "enum": ["string", "number", "integer", "boolean"],
-          "description": "Coerce the captured string to this return type."
+          "description": "Convert the captured text to this type."
         }
       }
     },
@@ -186,7 +186,7 @@
         "when": {
           "type": "object",
           "additionalProperties": false,
-          "description": "The condition that signals this error. Exactly one form per rule.",
+          "description": "The page condition that signals this error; give exactly one form.",
           "properties": {
             "selectorVisible": { "$ref": "#/$defs/locatorSet" },
             "textContains": { "type": "string" },
@@ -197,7 +197,7 @@
         "raise": {
           "type": "string",
           "pattern": "^[A-Z][A-Z0-9_]*$",
-          "description": "Contract error code to raise. Validated against the contract method's declared errors at publish time."
+          "description": "The contract error code to return when the condition matches."
         }
       }
     }

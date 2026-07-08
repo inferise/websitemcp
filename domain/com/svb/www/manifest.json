@@ -4,14 +4,9 @@
   "version": "1.0",
   "contracts": [
     {
-      "id": "banking",
+      "id": "bank",
       "version": "1.0",
-      "binding": "1.0",
-      "methods": [
-        "checkBalance",
-        "transfer",
-        "payBill"
-      ]
+      "binding": "1.0"
     }
   ]
 }

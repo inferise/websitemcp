@@ -1,0 +1,81 @@
+{
+  "$schema": "../schema/1.0/contract.json",
+  "kind": "contract",
+  "id": "auth",
+  "version": "1.0",
+  "description": "Session and sign-in tools a site maps bindings to.",
+  "required": ["session"],
+  "tools": {
+    "reachable": {
+      "description": "Report whether the site is reachable.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "required": ["reachable"],
+        "properties": {
+          "reachable": { "type": "boolean", "description": "True if the site loaded and looks operable." },
+          "detail": { "type": "string", "description": "Optional note about the site's state." }
+        }
+      }
+    },
+    "session": {
+      "description": "Report whether the user is signed in and whether a two-factor prompt is waiting.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "required": ["active", "mfaPending"],
+        "properties": {
+          "active": { "type": "boolean", "description": "True if a user is currently signed in." },
+          "mfaPending": { "type": "boolean", "description": "True if a two-factor prompt is waiting for the user's code." }
+        }
+      }
+    },
+    "login": {
+      "description": "Sign in with the user's credentials.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["accountId", "passcode"],
+        "properties": {
+          "accountId": { "type": "string", "description": "The username or account id to sign in with." },
+          "passcode": { "type": "string", "description": "The secret to sign in with, password, PIN, or similar." },
+          "groupId": { "type": "string", "description": "Tenant or organization id, for multi-tenant sites." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["success"],
+        "properties": {
+          "success": { "type": "boolean", "description": "True if the sign-in was submitted; call session to confirm it took." },
+          "message": { "type": "string", "description": "Human-readable detail about the attempt." }
+        }
+      },
+      "errors": [
+        { "code": "PAGE_NOT_READY", "message": "The sign-in page or form wasn't found; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "logout": {
+      "description": "Sign the user out.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "required": ["success"],
+        "properties": {
+          "success": { "type": "boolean", "description": "True if the session was ended." }
+        }
+      }
+    },
+    "mfaStatus": {
+      "description": "Report the pending two-factor challenge and which step the user is on.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "required": ["pending"],
+        "properties": {
+          "pending": { "type": "boolean", "description": "True if a two-factor challenge is on screen." },
+          "step": { "type": "string", "enum": ["sendCode", "enterCode"], "description": "Which step the user is on: send the code or enter it." },
+          "message": { "type": "string", "description": "Guidance for completing the challenge." }
+        }
+      }
+    }
+  }
+}

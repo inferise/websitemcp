@@ -1,0 +1,249 @@
+{
+  "$schema": "../schema/1.0/contract.json",
+  "kind": "contract",
+  "id": "bank",
+  "version": "1.0",
+  "description": "Consumer banking tools a site maps bindings to.",
+  "required": ["checkBalance"],
+  "tools": {
+    "reachable": {
+      "description": "Report whether the site is reachable.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "required": ["reachable"],
+        "properties": {
+          "reachable": { "type": "boolean", "description": "True if the site loaded and looks operable." },
+          "detail": { "type": "string", "description": "Optional note about the site's state." }
+        }
+      }
+    },
+    "checkBalance": {
+      "description": "Read an account's available balance.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to read (id or nickname)." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["balance", "currency"],
+        "properties": {
+          "balance": { "type": "number", "description": "The amount available to spend." },
+          "currency": { "type": "string", "description": "ISO 4217 currency code." },
+          "asOf": { "type": "string", "format": "date-time", "description": "When the balance was read." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." }
+      ]
+    },
+    "listAccounts": {
+      "description": "List the known accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "array",
+        "description": "The accounts the signed-in user can see.",
+        "items": {
+          "type": "object",
+          "required": ["account", "type"],
+          "properties": {
+            "account": { "type": "string", "description": "Account id." },
+            "label": { "type": "string", "description": "Account nickname." },
+            "type": { "type": "string", "description": "Account type (e.g. checking, savings)." }
+          }
+        }
+      },
+      "errors": [
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." }
+      ]
+    },
+    "getAccount": {
+      "description": "Get one account.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to fetch (id or nickname)." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["account", "type"],
+        "properties": {
+          "account": { "type": "string", "description": "Account id." },
+          "label": { "type": "string", "description": "Account nickname." },
+          "type": { "type": "string", "description": "Account type (e.g. checking, savings)." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." }
+      ]
+    },
+    "listTransactions": {
+      "description": "List an account's transactions.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to read (id or nickname)." },
+          "from": { "type": "string", "format": "date", "description": "Only include transactions on or after this date (YYYY-MM-DD)." },
+          "to": { "type": "string", "format": "date", "description": "Only include transactions on or before this date (YYYY-MM-DD)." }
+        }
+      },
+      "outputSchema": {
+        "type": "array",
+        "description": "The account's transactions in the date range.",
+        "items": {
+          "type": "object",
+          "required": ["id", "date", "currency"],
+          "properties": {
+            "id": { "type": "string", "description": "Stable transaction id." },
+            "date": { "type": "string", "format": "date", "description": "When the transaction posted (YYYY-MM-DD)." },
+            "type": { "type": "string", "description": "Transaction type (e.g. debit, credit, transfer)." },
+            "description": { "type": "string", "description": "What the transaction was for." },
+            "amount": { "type": "number", "description": "Signed amount; negative for debits." },
+            "currency": { "type": "string", "description": "ISO 4217 currency code." }
+          }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." }
+      ]
+    },
+    "previewTransfer": {
+      "description": "Dry-run an account-to-account transfer; returns a previewId to commit.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["from", "to", "amount"],
+        "properties": {
+          "from": { "type": "string", "description": "Account to move money from." },
+          "to": { "type": "string", "description": "Account to move money to." },
+          "amount": { "type": "number", "minimum": 0, "description": "Amount to move." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["previewId", "from", "to", "amount", "currency"],
+        "properties": {
+          "previewId": { "type": "string", "description": "Token for the previewed transfer; pass it to transfer to commit." },
+          "from": { "type": "string", "description": "Account money moves from." },
+          "to": { "type": "string", "description": "Account money moves to." },
+          "amount": { "type": "number", "description": "Amount that will move." },
+          "fromLabel": { "type": "string", "description": "Source account nickname." },
+          "toLabel": { "type": "string", "description": "Destination account nickname." },
+          "when": { "type": "string", "description": "When it will run (e.g. Once)." },
+          "currency": { "type": "string", "description": "ISO 4217 currency code." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "The source or destination account wasn't found; call listAccounts and retry with valid ids." },
+        { "code": "INSUFFICIENT_FUNDS", "message": "The source account lacks available funds; lower the amount or pick another account, then re-preview." },
+        { "code": "LIMIT_EXCEEDED", "message": "The amount is over a transfer limit; try a smaller amount or split it." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." }
+      ]
+    },
+    "transfer": {
+      "description": "Commit a previewed transfer.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["previewId"],
+        "properties": {
+          "previewId": { "type": "string", "description": "The token from previewTransfer." },
+          "confirm": { "type": "boolean", "description": "Set true to confirm intent to move the funds." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["confirmationId", "status"],
+        "properties": {
+          "confirmationId": { "type": "string", "description": "The provider's confirmation reference." },
+          "status": { "type": "string", "enum": ["posted", "pending"], "description": "Whether it posted or is still pending." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "The source or destination account wasn't found; call listAccounts and retry with valid ids." },
+        { "code": "INSUFFICIENT_FUNDS", "message": "The source account lacks available funds; lower the amount or pick another account, then re-preview." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." }
+      ]
+    },
+    "payBill": {
+      "description": "Pay a registered payee.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["payee", "amount"],
+        "properties": {
+          "payee": { "type": "string", "description": "The registered payee to pay." },
+          "amount": { "type": "number", "minimum": 0, "description": "Amount to pay." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["confirmationId", "status"],
+        "properties": {
+          "confirmationId": { "type": "string", "description": "The provider's confirmation reference." },
+          "status": { "type": "string", "enum": ["posted", "pending", "scheduled"], "description": "Whether it posted, is pending, or is scheduled." }
+        }
+      },
+      "errors": [
+        { "code": "PAYEE_NOT_FOUND", "message": "No registered payee matched; check the payee name (or add it on the site), then retry." },
+        { "code": "INSUFFICIENT_FUNDS", "message": "Not enough available funds to pay the bill; lower the amount or fund the account, then retry." }
+      ]
+    },
+    "wireTransfer": {
+      "description": "Send a wire to an external account.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["to", "routing", "amount"],
+        "properties": {
+          "to": { "type": "string", "description": "The beneficiary's account." },
+          "routing": { "type": "string", "description": "Routing / ABA code." },
+          "amount": { "type": "number", "minimum": 0, "description": "Amount to wire." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["confirmationId", "status"],
+        "properties": {
+          "confirmationId": { "type": "string", "description": "The provider's confirmation reference." },
+          "status": { "type": "string", "enum": ["posted", "pending"], "description": "Whether it posted or is still pending." }
+        }
+      },
+      "errors": [
+        { "code": "INVALID_ROUTING", "message": "The routing number is invalid; correct it and retry." },
+        { "code": "INSUFFICIENT_FUNDS", "message": "Not enough available funds for the wire; lower the amount or fund the account, then retry." },
+        { "code": "LIMIT_EXCEEDED", "message": "The amount is over a wire limit; try a smaller amount." }
+      ]
+    },
+    "orderChecks": {
+      "description": "Order a checkbook for an account.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account", "quantity"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to order checks for." },
+          "quantity": { "type": "integer", "minimum": 1, "description": "How many checks to order." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["orderId"],
+        "properties": {
+          "orderId": { "type": "string", "description": "The check order's id." },
+          "estimatedDelivery": { "type": "string", "format": "date", "description": "Estimated delivery date." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." }
+      ]
+    }
+  }
+}

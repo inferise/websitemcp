@@ -1,0 +1,21 @@
+{
+  "$schema": "../schema/1.0/contract.json",
+  "kind": "contract",
+  "id": "hotel",
+  "version": "1.0",
+  "description": "Hotel and lodging tools a site maps bindings to.",
+  "tools": {
+    "reachable": {
+      "description": "Report whether the site is reachable.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "required": ["reachable"],
+        "properties": {
+          "reachable": { "type": "boolean", "description": "True if the site loaded and looks operable." },
+          "detail": { "type": "string", "description": "Optional note about the site's state." }
+        }
+      }
+    }
+  }
+}

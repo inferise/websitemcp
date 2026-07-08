@@ -3,7 +3,7 @@
 
 Validates every site manifest and its bindings against the spec:
   * structural checks (kind, required fields, version/id patterns, path agreement)
-  * the cross-artifact invariants from spec/1.0.md section 9
+  * the cross-artifact invariants from SPEC_1.0.md section 9
 Resolves the shared contracts the manifest pins as needed.
 
 Zero required dependencies. If `jsonschema` is importable, each instance is
@@ -86,6 +86,18 @@ def schema_validate(kind, inst, label):
           + ("" if not errs else f" -> {list(errs[0].path)} {errs[0].message}"))
 
 
+def validate_contract(cpath):
+    rel = os.path.relpath(cpath, ROOT)
+    print(f"\n== {rel} ==")
+    c = load(cpath)
+    schema_validate("contract", c, rel)
+    check(c.get("kind") == "contract", "contract.kind == 'contract'")
+    stem = os.path.basename(cpath)[:-5]  # strip '.json'
+    fid, _, fver = stem.partition("@")
+    check(c.get("id") == fid, f"contract.id matches filename ({fid})")
+    check(str(c.get("version")) == fver, f"contract.version matches filename ({fver})")
+
+
 def validate_manifest(mpath):
     rel = os.path.relpath(mpath, ROOT)
     print(f"\n== {rel} ==")
@@ -106,7 +118,6 @@ def validate_manifest(mpath):
         cid = entry.get("id")
         cver = entry.get("version")
         bver = entry.get("binding")
-        mmethods = set(entry.get("methods", []))
         print(f"  -- contract '{cid}'@{cver} via binding {bver} --")
 
         # contract resolves
@@ -114,11 +125,9 @@ def validate_manifest(mpath):
         if not check(os.path.exists(cpath), f"contract file resolves: contract/{cid}@{cver}.json"):
             continue
         c = load(cpath)
-        cmethods = c.get("methods", {})
-        check(set(mmethods) <= set(cmethods), "INV1 manifest.methods ⊆ contract.methods")
-        check(set(c.get("required", [])) <= mmethods, "INV2 contract.required ⊆ manifest.methods")
+        cmethods = c.get("tools", {})
 
-        # binding resolves
+        # binding resolves, the binding's tools ARE the live tool set
         bpath = os.path.join(site_dir, f"{cid}@{bver}.json")
         if not check(os.path.exists(bpath), f"binding file resolves: {cid}@{bver}.json"):
             continue
@@ -127,16 +136,19 @@ def validate_manifest(mpath):
         check(b.get("kind") == "binding", "binding.kind == 'binding'")
         check(b.get("contract") == cid, "binding.contract matches filename")
         check(str(b.get("version")) == str(bver), "binding.version matches filename @version")
-        check(b.get("satisfiesContract") == cver, "INV4 binding.satisfiesContract == manifest pin")
-        check(set(b.get("methods", {})) == mmethods, "INV3 binding.methods keys == manifest.methods")
+        check(b.get("satisfiesContract") == cver, "INV3 binding.satisfiesContract == manifest pin")
 
-        # INV6 bind-map integrity, per method
+        btools = set(b.get("tools", {}))
+        check(btools <= set(cmethods), "INV1 binding.tools ⊆ contract.tools")
+        check(set(c.get("required", [])) <= btools, "INV2 contract.required ⊆ binding.tools")
+
+        # INV4 bind-map integrity, per tool
         bad = []
-        for mn, rec in b.get("methods", {}).items():
+        for mn, rec in b.get("tools", {}).items():
             if mn not in cmethods:
                 continue
-            params = set(cmethods[mn].get("params", {}).get("properties", {}))
-            rets = set(cmethods[mn].get("returns", {}).get("properties", {}))
+            params = set(cmethods[mn].get("inputSchema", {}).get("properties", {}))
+            rets = set(cmethods[mn].get("outputSchema", {}).get("properties", {}))
             codes = {e["code"] for e in cmethods[mn].get("errors", [])}
             for t in find_tokens(rec):
                 if t not in params:
@@ -148,7 +160,7 @@ def validate_manifest(mpath):
             for er in rec.get("errors", []):
                 if er.get("raise") not in codes:
                     bad.append(f"{mn}: raises '{er.get('raise')}' not a contract error")
-        check(not bad, "INV6 bind-map integrity (tokens/fields/error codes)")
+        check(not bad, "INV4 bind-map integrity (tokens/fields/error codes)")
         for x in bad:
             print("        -", x)
 
@@ -161,12 +173,21 @@ def main():
             manifests.append(os.path.join(dirpath, "manifest.json"))
     manifests.sort()
 
+    contract_dir = os.path.join(ROOT, "contract")
+    contracts = sorted(
+        os.path.join(contract_dir, f)
+        for f in os.listdir(contract_dir)
+        if f.endswith(".json")
+    ) if os.path.isdir(contract_dir) else []
+
     if VALIDATORS is None:
-        print("note: 'jsonschema' not importable — running structural + invariant checks only")
-    if not manifests:
-        print("no manifests found under domain/")
+        print("note: 'jsonschema' not importable, running structural + invariant checks only")
+    if not manifests and not contracts:
+        print("no contracts under contract/ or manifests under domain/")
         return 1
 
+    for cp in contracts:
+        validate_contract(cp)
     for mp in manifests:
         validate_manifest(mp)
 

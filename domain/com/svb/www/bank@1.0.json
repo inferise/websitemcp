@@ -1,10 +1,10 @@
 {
   "$schema": "https://websitemcp.inferise.com/schema/1.0/binding.json",
   "kind": "binding",
-  "contract": "banking",
+  "contract": "bank",
   "satisfiesContract": "1.0",
   "version": "1.0",
-  "methods": {
+  "tools": {
     "checkBalance": {
       "steps": [
         {
@@ -36,105 +36,6 @@
         }
       ],
       "errors": [
-        {
-          "when": { "selectorVisible": { "locators": [ { "strategy": "text", "value": "Account not found" } ] } },
-          "raise": "ACCOUNT_NOT_FOUND"
-        }
-      ]
-    },
-
-    "transfer": {
-      "steps": [
-        {
-          "action": "navigate",
-          "url": "https://www.svb.com/transfer",
-          "wait": { "type": "networkIdle", "timeoutMs": 15000 }
-        },
-        {
-          "action": "select",
-          "note": "From account.",
-          "target": {
-            "locators": [
-              { "strategy": "label", "value": "From" },
-              { "strategy": "testid", "value": "transfer-from" },
-              { "strategy": "css", "value": "select[name='from']" }
-            ]
-          },
-          "value": "{{from}}"
-        },
-        {
-          "action": "select",
-          "note": "To account.",
-          "target": {
-            "locators": [
-              { "strategy": "label", "value": "To" },
-              { "strategy": "testid", "value": "transfer-to" },
-              { "strategy": "css", "value": "select[name='to']" }
-            ]
-          },
-          "value": "{{to}}"
-        },
-        {
-          "action": "input",
-          "note": "Amount field.",
-          "target": {
-            "locators": [
-              { "strategy": "label", "value": "Amount" },
-              { "strategy": "testid", "value": "transfer-amount" },
-              { "strategy": "css", "value": "input[name='amount']" }
-            ]
-          },
-          "value": "{{amount}}"
-        },
-        {
-          "action": "submit",
-          "target": {
-            "locators": [
-              { "strategy": "role", "value": "button", "name": "Transfer money" },
-              { "strategy": "testid", "value": "transfer-submit" },
-              { "strategy": "css", "value": "button.transfer-submit" }
-            ]
-          },
-          "wait": { "type": "networkIdle", "timeoutMs": 20000 }
-        },
-        {
-          "action": "waitFor",
-          "wait": {
-            "type": "selector",
-            "target": { "locators": [ { "strategy": "testid", "value": "transfer-confirmation" } ] },
-            "timeoutMs": 20000
-          }
-        },
-        {
-          "action": "read",
-          "target": {
-            "locators": [
-              { "strategy": "testid", "value": "confirmation-number" },
-              { "strategy": "css", "value": ".confirmation .number" }
-            ]
-          },
-          "extract": { "field": "confirmationId", "from": "text", "as": "string" }
-        },
-        {
-          "action": "read",
-          "target": {
-            "locators": [
-              { "strategy": "testid", "value": "confirmation-status" },
-              { "strategy": "css", "value": ".confirmation .status" }
-            ]
-          },
-          "extract": { "field": "status", "from": "text", "as": "string" }
-        }
-      ],
-      "errors": [
-        {
-          "when": { "selectorVisible": { "locators": [ { "strategy": "testid", "value": "error-insufficient-funds" } ] } },
-          "raise": "INSUFFICIENT_FUNDS"
-        },
-        {
-          "when": { "textContains": "exceeds your daily transfer limit" },
-          "raise": "LIMIT_EXCEEDED"
-        },
         {
           "when": { "selectorVisible": { "locators": [ { "strategy": "text", "value": "Account not found" } ] } },
           "raise": "ACCOUNT_NOT_FOUND"

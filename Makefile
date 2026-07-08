@@ -8,3 +8,6 @@ help: ## List available targets
 
 validate: ## Validate org manifests and bindings against the spec
 	@$(PYTHON) tools/validate.py
+
+clean:
+	find . -name '.fuse_hidden*' -delete

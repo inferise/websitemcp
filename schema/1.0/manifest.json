@@ -2,20 +2,20 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://websitemcp.inferise.com/schema/1.0/manifest.json",
   "title": "WebSiteMCP Manifest",
-  "description": "Meta-schema for a WebSiteMCP manifest: the per-site declaration of which contracts, which methods of each, and which binding version are live. The manifest's declared methods are the single source of truth for what is callable; a method the manifest omits never appears in the tool surface. Lives at domain/<reverse-DNS path>/manifest.json (e.g. domain/com/svb/www/); the path is the site's identity. Part of WebSiteMCP spec version 1.0.",
+  "description": "The manifest format: a site's declaration of which contracts it offers and which contract and binding versions are pinned. Lives at domain/<reverse-DNS path>/manifest.json; the path is the site's identity.",
   "type": "object",
   "additionalProperties": false,
   "required": ["kind", "version", "contracts"],
   "properties": {
-    "$schema": { "type": "string" },
-    "kind": { "const": "manifest", "description": "Artifact discriminator." },
+    "$schema": { "type": "string", "description": "Optional URL of the schema this file follows." },
+    "kind": { "const": "manifest", "description": "Marks this file as a manifest." },
     "version": {
       "$ref": "#/$defs/semver",
-      "description": "Manifest version. Bumps when declared support changes or a contract/binding pin is re-pinned."
+      "description": "The manifest version; bump it whenever a contract or binding pin changes."
     },
     "contracts": {
       "type": "array",
-      "description": "The categories this site exposes, each pinned to an exact contract version and an exact binding version.",
+      "description": "The categories this site offers, each pinned to an exact contract and binding version.",
       "minItems": 1,
       "items": { "$ref": "#/$defs/contractRef" }
     }
@@ -28,27 +28,20 @@
     "contractRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "version", "binding", "methods"],
+      "required": ["id", "version", "binding"],
       "properties": {
         "id": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9]*$",
-          "description": "Contract category id. Resolves to contract/<id>@<version>.json."
+          "description": "Which contract this site offers; resolves to contract/<id>@<version>.json."
         },
         "version": {
           "$ref": "#/$defs/semver",
-          "description": "Exact pinned contract version. Must equal the binding's satisfiesContract. Pins are exact, never ranges; nothing auto-upgrades."
+          "description": "The exact contract version this site targets; must equal the binding's satisfiesContract."
         },
         "binding": {
           "$ref": "#/$defs/semver",
-          "description": "Exact binding version to load. Resolves to <id>@<binding>.json beside this manifest. Free to move under a fixed contract version."
-        },
-        "methods": {
-          "type": "array",
-          "description": "The subset of the contract's methods that are live on this site. Must be a subset of the contract's methods and include the contract's required core. Becomes the callable tool list.",
-          "minItems": 1,
-          "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
-          "uniqueItems": true
+          "description": "The exact binding version to load; its implemented tools are the site's live tool set."
         }
       }
     }

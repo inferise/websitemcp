@@ -2,74 +2,74 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://websitemcp.inferise.com/schema/1.0/contract.json",
   "title": "WebSiteMCP Contract",
-  "description": "Meta-schema for a WebSiteMCP contract: the abstract, shared tool interface for a category. Authored once per category and reused across every site that implements it. A contract defines the full menu of methods and their I/O; manifests declare per-site subsets, and bindings implement them. Part of WebSiteMCP spec version 1.0.",
+  "description": "The contract format: a category's shared, versioned tool interface, authored once and reused by every site that implements the category.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "id", "version", "methods"],
+  "required": ["kind", "id", "version", "description", "tools"],
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "Optional pointer to this meta-schema."
+      "description": "Optional URL of the schema this file follows."
     },
     "kind": {
       "const": "contract",
-      "description": "Artifact discriminator."
+      "description": "Marks this file as a contract."
     },
     "id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*$",
-      "description": "Category identifier, e.g. 'banking'. Must match the filename stem before '@'."
+      "description": "The category's machine id (e.g. `bank`); matches the filename before `@`."
     },
     "version": {
       "$ref": "#/$defs/semver",
-      "description": "Interface version. Bumps when a method or param/return/error schema is added, changed, or renamed. Must match the '@<version>' in the filename."
+      "description": "The interface version; bump it on any tool or input/output change. Matches `@<version>` in the filename."
     },
-    "title": { "type": "string" },
     "description": { "type": "string" },
     "required": {
       "type": "array",
-      "description": "Optional conformance core: method names every implementing manifest MUST declare. Enables the 'contract.required subset of manifest.methods' floor.",
-      "items": { "$ref": "#/$defs/methodName" },
+      "description": "Baseline tools every site's binding must implement to claim this category.",
+      "items": { "$ref": "#/$defs/toolName" },
       "uniqueItems": true
     },
-    "methods": {
+    "tools": {
       "type": "object",
-      "description": "The full set of methods this category defines, keyed by method name.",
+      "description": "Every tool this category offers, keyed by tool id; must include a `reachable` probe.",
       "minProperties": 1,
-      "propertyNames": { "$ref": "#/$defs/methodName" },
-      "additionalProperties": { "$ref": "#/$defs/method" }
+      "required": ["reachable"],
+      "propertyNames": { "$ref": "#/$defs/toolName" },
+      "additionalProperties": { "$ref": "#/$defs/tool" }
     }
   },
   "$defs": {
     "semver": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+$",
-      "description": "MAJOR.MINOR version line for the interface."
+      "description": "A MAJOR.MINOR version string."
     },
-    "methodName": {
+    "toolName": {
       "type": "string",
       "pattern": "^[a-z][a-zA-Z0-9]*$"
     },
-    "method": {
+    "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["params", "returns"],
+      "required": ["description", "inputSchema", "outputSchema"],
       "properties": {
-        "summary": {
+        "description": {
           "type": "string",
-          "description": "One-line, agent-facing description of what the method does."
+          "description": "One sentence telling an agent what the tool does and when to use it."
         },
-        "params": {
+        "inputSchema": {
           "$ref": "#/$defs/schemaObject",
-          "description": "JSON-Schema-style object describing the call parameters. The names here are the only valid {{tokens}} a binding may inject."
+          "description": "The tool's inputs, as an object of named parameter fields."
         },
-        "returns": {
+        "outputSchema": {
           "$ref": "#/$defs/schemaObject",
-          "description": "JSON-Schema-style object describing the result. The property names here are the only valid output fields a binding may extract."
+          "description": "The tool's output, as an object of named result fields."
         },
         "errors": {
           "type": "array",
-          "description": "The closed set of error codes this method may raise. A binding may only map a recognized failure to one of these codes.",
+          "description": "The full set of errors this tool can return.",
           "items": { "$ref": "#/$defs/error" },
           "uniqueItems": true
         }
@@ -83,17 +83,17 @@
         "code": {
           "type": "string",
           "pattern": "^[A-Z][A-Z0-9_]*$",
-          "description": "Stable, machine-readable error code, e.g. INSUFFICIENT_FUNDS."
+          "description": "Stable identifier for this failure so the caller can detect and branch on it (e.g. `INSUFFICIENT_FUNDS`)."
         },
         "message": {
           "type": "string",
-          "description": "Human-readable default explanation."
+          "description": "Human-readable detail of the error."
         }
       }
     },
     "schemaObject": {
       "type": "object",
-      "description": "A constrained JSON-Schema subset. Must declare a type; object types declare properties (+ optional required).",
+      "description": "A small JSON-Schema subset for inputSchema and outputSchema: a `type`, plus `properties`/`required` for objects.",
       "required": ["type"],
       "properties": {
         "type": {

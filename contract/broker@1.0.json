@@ -1,0 +1,427 @@
+{
+  "$schema": "../schema/1.0/contract.json",
+  "kind": "contract",
+  "id": "broker",
+  "version": "1.0",
+  "description": "Retail brokerage tools a site maps bindings to.",
+  "required": ["listAccounts"],
+  "tools": {
+    "reachable": {
+      "description": "Report whether the site is reachable.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "required": ["reachable"],
+        "properties": {
+          "reachable": { "type": "boolean", "description": "True if the site loaded and looks operable." },
+          "detail": { "type": "string", "description": "Optional note about the site's state." }
+        }
+      }
+    },
+    "listAccounts": {
+      "description": "List the known accounts.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "array",
+        "description": "The accounts the signed-in user can see.",
+        "items": {
+          "type": "object",
+          "required": ["account", "type"],
+          "properties": {
+            "account": { "type": "string", "description": "Account id." },
+            "label": { "type": "string", "description": "Account nickname." },
+            "type": { "type": "string", "description": "Account type (e.g. brokerage, IRA)." }
+          }
+        }
+      },
+      "errors": [
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The accounts page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "getAccount": {
+      "description": "Get one account.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to fetch (id or nickname)." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["account", "type"],
+        "properties": {
+          "account": { "type": "string", "description": "Account id." },
+          "label": { "type": "string", "description": "Account nickname." },
+          "type": { "type": "string", "description": "Account type (e.g. brokerage, IRA)." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The account page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "balances": {
+      "description": "Get an account's balances.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to read (id or nickname)." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["account", "currency"],
+        "properties": {
+          "account": { "type": "string", "description": "Account id." },
+          "netAccountValue": { "type": "number", "description": "Total account value, cash plus positions." },
+          "totalBalance": { "type": "number", "description": "Total balance." },
+          "availableBalance": { "type": "number", "description": "Balance available to trade or spend." },
+          "cashPurchasingPower": { "type": "number", "description": "Cash available to buy securities." },
+          "availableForWithdrawal": { "type": "number", "description": "Amount available to withdraw." },
+          "daysGain": { "type": "number", "description": "Gain or loss so far today." },
+          "currency": { "type": "string", "description": "ISO 4217 currency code." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The balances page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "listTransactions": {
+      "description": "List an account's transactions.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to read (id or nickname)." },
+          "from": { "type": "string", "format": "date", "description": "Only include transactions on or after this date (YYYY-MM-DD)." },
+          "to": { "type": "string", "format": "date", "description": "Only include transactions on or before this date (YYYY-MM-DD)." }
+        }
+      },
+      "outputSchema": {
+        "type": "array",
+        "description": "The account's transactions in the date range.",
+        "items": {
+          "type": "object",
+          "required": ["id", "date", "currency"],
+          "properties": {
+            "id": { "type": "string", "description": "Stable transaction id." },
+            "date": { "type": "string", "format": "date", "description": "When the transaction posted (YYYY-MM-DD)." },
+            "type": { "type": "string", "description": "Transaction type (e.g. dividend, trade, transfer)." },
+            "ticker": { "type": "string", "description": "Related security symbol, if any." },
+            "description": { "type": "string", "description": "What the transaction was for." },
+            "amount": { "type": "number", "description": "Signed amount; negative for debits." },
+            "currency": { "type": "string", "description": "ISO 4217 currency code." }
+          }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The activity page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "listPositions": {
+      "description": "List an account's holdings.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to read (id or nickname)." }
+        }
+      },
+      "outputSchema": {
+        "type": "array",
+        "description": "The account's holdings.",
+        "items": {
+          "type": "object",
+          "required": ["ticker", "currency"],
+          "properties": {
+            "ticker": { "type": "string", "description": "Security symbol." },
+            "acquiredDate": { "type": "string", "format": "date", "description": "When the lot was acquired, if it's a single lot." },
+            "quantity": { "type": "number", "description": "Shares held." },
+            "lastPrice": { "type": "number", "description": "Latest price per share." },
+            "change": { "type": "number", "description": "Price change today, per share." },
+            "changePercent": { "type": "number", "description": "Price change today, as a percent." },
+            "pricePaid": { "type": "number", "description": "Average price paid per share." },
+            "daysGain": { "type": "number", "description": "Gain or loss so far today." },
+            "totalGain": { "type": "number", "description": "Total unrealized gain or loss." },
+            "totalGainPercent": { "type": "number", "description": "Total unrealized gain or loss, as a percent." },
+            "value": { "type": "number", "description": "Current market value of the holding." },
+            "currency": { "type": "string", "description": "ISO 4217 currency code." }
+          }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The positions page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "listOrders": {
+      "description": "List an account's open orders.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to read (id or nickname)." }
+        }
+      },
+      "outputSchema": {
+        "type": "array",
+        "description": "The account's open orders.",
+        "items": {
+          "type": "object",
+          "required": ["orderId", "currency"],
+          "properties": {
+            "orderId": { "type": "string", "description": "Order id." },
+            "ticker": { "type": "string", "description": "Security symbol." },
+            "side": { "type": "string", "enum": ["buy", "sell"], "description": "Buy or sell." },
+            "quantity": { "type": "number", "description": "Order size in shares." },
+            "type": { "type": "string", "description": "Order type (e.g. market, limit, stop)." },
+            "price": { "type": "number", "description": "Limit or stop price, if any." },
+            "timeInForce": { "type": "string", "description": "How long the order stays active (e.g. good_till_cancelled)." },
+            "status": { "type": "string", "description": "Order status (e.g. open, partially_filled, filled, cancelled)." },
+            "placedAt": { "type": "string", "description": "When the order was placed." },
+            "currency": { "type": "string", "description": "ISO 4217 currency code." }
+          }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The orders page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "previewOrder": {
+      "description": "Dry-run an equity order; returns a previewId and cost estimate.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["account", "ticker", "side", "quantity", "type"],
+        "properties": {
+          "account": { "type": "string", "description": "The account to trade in (id or nickname)." },
+          "ticker": { "type": "string", "description": "Security symbol to trade (e.g. AAPL)." },
+          "side": { "type": "string", "enum": ["buy", "sell"], "description": "Buy or sell." },
+          "quantity": { "type": "integer", "minimum": 1, "description": "Whole shares to trade." },
+          "type": { "type": "string", "description": "Order type (e.g. market, limit, stop)." },
+          "price": { "type": "number", "minimum": 0, "description": "Limit or stop price; omit for market orders." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["previewId", "ticker", "side", "quantity", "type", "estimatedCost", "estimatedFees", "currency"],
+        "properties": {
+          "previewId": { "type": "string", "description": "Token for the previewed order; pass it to placeOrder to commit." },
+          "ticker": { "type": "string", "description": "Security symbol." },
+          "side": { "type": "string", "enum": ["buy", "sell"], "description": "Buy or sell." },
+          "quantity": { "type": "integer", "description": "Whole shares." },
+          "type": { "type": "string", "description": "Order type." },
+          "price": { "type": "number", "description": "Limit or stop price, if any." },
+          "timeInForce": { "type": "string", "description": "How long the order will stay active." },
+          "estimatedCost": { "type": "number", "description": "Estimated principal cost." },
+          "estimatedFees": { "type": "number", "description": "Estimated commissions and fees." },
+          "warnings": { "type": "array", "items": { "type": "string" }, "description": "Warnings the broker raised on the preview." },
+          "expiresAt": { "type": "string", "description": "When the preview expires and must be re-run." },
+          "currency": { "type": "string", "description": "ISO 4217 currency code." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "That account id wasn't found; call listAccounts and retry with a listed id." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "NOT_FOUND", "message": "That symbol wasn't found or isn't tradable; check the ticker and retry." },
+        { "code": "PAGE_NOT_READY", "message": "The order ticket didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "placeOrder": {
+      "description": "Place a previewed order.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["previewId"],
+        "properties": {
+          "previewId": { "type": "string", "description": "The token from previewOrder." },
+          "confirm": { "type": "boolean", "description": "Set true to confirm intent to place the order." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["orderId", "status"],
+        "properties": {
+          "orderId": { "type": "string", "description": "Id of the placed order." },
+          "status": { "type": "string", "description": "Placement status from the broker." }
+        }
+      },
+      "errors": [
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "ACTIONS_DISABLED", "message": "Write actions are disabled in the host; ask the user to enable them, then retry placing the order." },
+        { "code": "PLACEMENT_DECLINED", "message": "The host didn't confirm the order; ask the user to confirm, then retry." },
+        { "code": "NOT_FOUND", "message": "The preview expired or is unknown; re-run the preview for a fresh previewId, then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The order page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "cancelOrder": {
+      "description": "Cancel an open order.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["orderId"],
+        "properties": {
+          "orderId": { "type": "string", "description": "The order to cancel (from listOrders)." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["success"],
+        "properties": {
+          "success": { "type": "boolean", "description": "True if the order was cancelled." }
+        }
+      },
+      "errors": [
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "ACTIONS_DISABLED", "message": "Write actions are disabled in the host; ask the user to enable them, then retry the cancel." },
+        { "code": "NOT_FOUND", "message": "That order isn't open or wasn't found; call listOrders and retry with a current orderId." },
+        { "code": "PAGE_NOT_READY", "message": "The order page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "getQuote": {
+      "description": "Get a market quote for a symbol.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["ticker"],
+        "properties": {
+          "ticker": { "type": "string", "description": "Security symbol (e.g. AAPL)." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["ticker", "currency"],
+        "properties": {
+          "ticker": { "type": "string", "description": "Security symbol." },
+          "last": { "type": "number", "description": "Last traded price." },
+          "change": { "type": "number", "description": "Price change today." },
+          "changePercent": { "type": "number", "description": "Price change today, as a percent." },
+          "bid": { "type": "number", "description": "Current bid price." },
+          "ask": { "type": "number", "description": "Current ask price." },
+          "bidSize": { "type": "number", "description": "Size at the bid." },
+          "askSize": { "type": "number", "description": "Size at the ask." },
+          "volume": { "type": "number", "description": "Shares traded today." },
+          "open": { "type": "number", "description": "Today's opening price." },
+          "dayHigh": { "type": "number", "description": "Today's high." },
+          "dayLow": { "type": "number", "description": "Today's low." },
+          "previousClose": { "type": "number", "description": "Prior session's close." },
+          "week52High": { "type": "number", "description": "52-week high." },
+          "week52Low": { "type": "number", "description": "52-week low." },
+          "currency": { "type": "string", "description": "ISO 4217 currency code." }
+        }
+      },
+      "errors": [
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "NOT_FOUND", "message": "That symbol wasn't found; check the ticker and retry." },
+        { "code": "PAGE_NOT_READY", "message": "The quote page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "getNews": {
+      "description": "Get recent news for a symbol.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["ticker"],
+        "properties": {
+          "ticker": { "type": "string", "description": "Security symbol (e.g. AAPL)." }
+        }
+      },
+      "outputSchema": {
+        "type": "array",
+        "description": "Recent news for the symbol.",
+        "items": {
+          "type": "object",
+          "required": ["url"],
+          "properties": {
+            "url": { "type": "string", "description": "Link to the article." },
+            "headline": { "type": "string", "description": "Article headline." },
+            "source": { "type": "string", "description": "Publisher name." },
+            "publishedAt": { "type": "string", "description": "When it was published." }
+          }
+        }
+      },
+      "errors": [
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "NOT_FOUND", "message": "That symbol wasn't found; check the ticker and retry." },
+        { "code": "PAGE_NOT_READY", "message": "The quote page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "previewTransfer": {
+      "description": "Dry-run a cash transfer between the user's accounts; returns a previewId to commit.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["fromAccount", "toAccount", "amount"],
+        "properties": {
+          "fromAccount": { "type": "string", "description": "Account to move money from (id or name)." },
+          "toAccount": { "type": "string", "description": "Account to move money to (id or name)." },
+          "amount": { "type": "number", "minimum": 0, "description": "Amount to move." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["previewId", "fromAccount", "toAccount", "amount", "currency"],
+        "properties": {
+          "previewId": { "type": "string", "description": "Token for the previewed transfer; pass it to transfer to commit." },
+          "fromAccount": { "type": "string", "description": "Account money moves from." },
+          "toAccount": { "type": "string", "description": "Account money moves to." },
+          "amount": { "type": "number", "description": "Amount that will move." },
+          "fromLabel": { "type": "string", "description": "Source account nickname." },
+          "toLabel": { "type": "string", "description": "Destination account nickname." },
+          "when": { "type": "string", "description": "When it will run (e.g. Once)." },
+          "currency": { "type": "string", "description": "ISO 4217 currency code." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "The source or destination account wasn't found; call listAccounts and retry with valid ids." },
+        { "code": "INSUFFICIENT_FUNDS", "message": "The source account lacks available funds; lower the amount or pick another account, then re-preview." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The transfer form didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    },
+    "transfer": {
+      "description": "Commit a previewed cash transfer.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["previewId"],
+        "properties": {
+          "previewId": { "type": "string", "description": "The token from previewTransfer." },
+          "confirm": { "type": "boolean", "description": "Set true to confirm intent to move the funds." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["success", "confirmationId"],
+        "properties": {
+          "success": { "type": "boolean", "description": "True if the transfer was submitted." },
+          "confirmationId": { "type": "string", "description": "The provider's confirmation reference." }
+        }
+      },
+      "errors": [
+        { "code": "ACCOUNT_NOT_FOUND", "message": "The source or destination account wasn't found; call listAccounts and retry with valid ids." },
+        { "code": "INSUFFICIENT_FUNDS", "message": "The source account lacks available funds; lower the amount or pick another account, then re-preview." },
+        { "code": "NOT_SIGNED_IN", "message": "No active session; call auth.login first, then retry." },
+        { "code": "MFA_REQUIRED", "message": "A two-factor challenge is pending; have the user complete it (see auth.mfaStatus), then retry." },
+        { "code": "ACTIONS_DISABLED", "message": "Write actions are disabled in the host; ask the user to enable them, then retry the transfer." },
+        { "code": "PLACEMENT_DECLINED", "message": "The host didn't confirm the transfer; ask the user to confirm, then retry." },
+        { "code": "NOT_FOUND", "message": "The preview expired or is unknown; re-run the preview for a fresh previewId, then retry." },
+        { "code": "PAGE_NOT_READY", "message": "The transfer page didn't load in time; retry, or call reachable to check the site is up." }
+      ]
+    }
+  }
+}
