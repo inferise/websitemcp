@@ -1,42 +1,45 @@
-# H2A MCP
+# WebSiteMCP
 
-**Human Interface to Agentic Interface** — an MCP specification for re-describing products built for human operation (websites, desktop and mobile apps, REST surfaces) as agent-callable MCP tools.
+**Much of the world's information and services live behind websites built for people, not agents. WebSiteMCP is a specification to make them accessible to agents.**
 
-H2A maps a human interface onto an agentic interface: it wraps an interface originally built for human use so an agent can operate it programmatically. Human-facing interfaces change continually, and H2A's central property is that it **confines that volatility to the binding layer**, beneath a stable, versioned, agent-facing tool surface. A site redesign becomes a binding-only republish — nothing the agent sees changes.
+The actions people actually need, moving money, booking travel, filing a claim, checking an order, mostly live behind websites with no usable API. Meanwhile the Model Context Protocol (MCP) has become the common way to give agents tools, but it reaches APIs, not the human web. WebSiteMCP closes that gap by _describing_ a site's actions as MCP tools, instead of requiring the site to publish an API of its own.
 
-## Core idea
+It is a specification, a set of JSON Schemas, for describing a human-facing site as a stable, versioned set of agent-callable MCP tools. The volatile part, how a given site actually works, is confined to a single replaceable layer, so a redesign is a behind-the-scenes republish and nothing an agent sees changes. That isolation is what makes an agent's use of a site reliable rather than brittle.
 
-A category's actions (check a balance, transfer funds, pay a bill) are modeled as a **contract** — an abstract tool interface shared across every site that implements the category. Each org declares, per interaction **surface** (`www`, `app`, `rest`), which contracts and which methods are live in a **manifest**, and the concrete recording that performs each method lives in a **binding**.
+## Core Concepts
 
-At its heart is a **what/how split**: the contract fixes *what* an agent can do — the inputs it supplies and the result it gets back — while the binding holds *how* that gets carried out on a given site. Contracts are abstract and shared; manifests and bindings are concrete and partitioned by org and surface. Confining the volatile *how* to the binding is what lets a site change without touching the agent-visible *what*.
+A **contract** defines the common actions for a category of site, for banking, _check balance, transfer funds, pay a bill_, as an abstract, versioned tool interface. It is authored once and shared by every provider in the category: the actions are the same whichever bank you use.
 
-## Participants
+_How_ each action maps onto a specific site differs from site to site, and that lives in a **binding**, a per-site description of how to fulfill the contract on one provider's site, which the provider can publish itself. The actions are common; the binding is specific.
 
-Two parties meet at the contract, and the spec exists to bridge them. The **agent** defines the task — the *what*. It reads *manifest + contracts*, sees only the live tools, and emits a fully-qualified call like `somebank.www.banking.transfer(...)`, asking for an outcome without knowing the route. The **orchestrator** carries it out — the *how*. It reads *manifest + bindings*, resolves the private recording, and drives the page, executing the task without knowing the user's ultimate goal. Both pivot on the manifest; neither needs the other's half at runtime.
+A **manifest** joins the two for a given site, identified by its hostname as a reverse-DNS folder path (`www.svb.com` lives at `domain/com/svb/www/`): it declares which contracts, and which of their actions, that site actually offers, and pins the exact contract and binding versions in use.
+
+Together these are the **what/how split** the spec formalizes: the contract fixes _what_ the tools are and holds still, while the binding holds _how_ they map onto the site and absorbs the churn of the real web. Confining the volatile _how_ to the binding is what lets a site change without changing the tools an agent sees.
+
+Concretely, the spec is a set of **JSON Schemas**, contract, manifest, and binding. Every contract, manifest, and binding is a JSON document validated against them, so the pieces are guaranteed to fit before anything ships.
 
 ## Artifacts
 
-| Artifact     | Scope                          | Defines                                                        | Consumed by        |
-| ------------ | ------------------------------ | ------------------------------------------------------------- | ------------------ |
-| **Contract** | Shared, per category           | Abstract methods + param/return/error schemas                 | Agent + Binding    |
-| **Manifest** | Per (org × surface)            | Which contracts, which methods, and which binding are live    | Agent              |
-| **Binding**  | Per (org × surface × contract) | The recording that performs each method                       | Orchestrator only  |
-| **Surface**  | Global vocabulary              | The closed set of interaction surfaces                        | Manifest + Binding |
+| Artifact     | Scope                          | Defines                                                           |
+| ------------ | ------------------------------ | ----------------------------------------------------------------- |
+| **Contract** | Shared, per category  | The abstract tool interface: methods + param/return/error schemas |
+| **Manifest** | Per site              | Which contracts, which methods, and which binding are live        |
+| **Binding**  | Per (site × contract) | How each method maps onto the site                                |
 
-The contract is the boundary between the two planes (see [Participants](#participants)): the agent consumes *manifest + contracts*, the orchestrator *manifest + bindings*.
+The contract is the shared, public interface; the binding is its private, site-specific implementation; the manifest declares which of the contract's tools a site actually offers.
 
 ## Repository layout
 
 ```
 spec/1.0.md                              # the normative specification
 schema/1.0/                              # JSON Schemas (the machine-readable spec)
-  contract.json  manifest.json  binding.json  surface.json
+  contract.json  manifest.json  binding.json
 contract/
   banking@1.0.json                       # shared, abstract; versioned in the filename
-org/
-  <org>/<surface>/
-    manifest.json                        # the (org × surface) declaration
-    <contract>@<bindingVersion>.json     # the binding/recording
+domain/
+  com/svb/www/                           # hostname as a reverse-DNS path (www.svb.com)
+    manifest.json                        # the per-site declaration
+    <contract>@<bindingVersion>.json     # the binding
 tools/validate.py                        # conformance checker
 Makefile
 ```
@@ -45,7 +48,7 @@ Schemas are versioned as a set (`schema/1.0/`); instances pin the spec they conf
 
 ## Example
 
-A complete worked slice lives under `contract/banking@1.0.json` and `org/somebank/www/` (`manifest.json` + `banking@1.0.json`). A bank website would exposes the `banking` category on its `www` surface, declaring only `checkBalance`, `transfer`, and `payBill` of the contract's full method set.
+A worked slice looks like `contract/banking@1.0.json` plus a per-site `domain/<reverse-DNS path>/` pair (`manifest.json` + `banking@1.0.json`), for example `domain/com/svb/www/` (the reverse-DNS path for `www.svb.com`). It would expose the `banking` category, declaring only `checkBalance`, `transfer`, and `payBill` of the contract's full method set.
 
 ## Validate
 
@@ -53,8 +56,8 @@ A complete worked slice lives under `contract/banking@1.0.json` and `org/someban
 make validate
 ```
 
-Walks every org manifest, resolves the contracts and bindings it pins, and checks structure plus the spec invariants (method subset, conformance floor, binding coverage, contract-pin match, bind-map integrity). Pure `python3`, no dependencies; if `jsonschema` is importable it additionally validates each instance against `schema/1.0/`.
+Walks every manifest, resolves the contracts and bindings it pins, and checks structure plus the spec invariants (method subset, conformance floor, binding coverage, contract-pin match, bind-map integrity). Pure `python3`, no dependencies; if `jsonschema` is importable it additionally validates each instance against `schema/1.0/`.
 
 ## Specification
 
-`spec/1.0.md` is the full normative reference: artifact definitions, the agent/orchestrator split, the fully-qualified tool name, resolution flow, versioning rules, and the validation invariants. Start there for anything beyond this overview.
+`spec/1.0.md` is the full normative reference: the three artifacts, the tool-naming scheme, versioning rules, and the validation invariants.

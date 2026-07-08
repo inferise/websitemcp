@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://h2amacp.inferise.com/schema/1.0/contract.json",
-  "title": "H2A MCP Contract",
-  "description": "Meta-schema for an H2A contract: the abstract, shared tool interface for a category. Authored once per category and reused across every org and surface that implements it. A contract defines the full menu of methods and their I/O; manifests declare per-(org x surface) subsets, and bindings implement them. Part of H2A spec version 1.0.",
+  "$id": "https://websitemcp.inferise.com/schema/1.0/contract.json",
+  "title": "WebSiteMCP Contract",
+  "description": "Meta-schema for a WebSiteMCP contract: the abstract, shared tool interface for a category. Authored once per category and reused across every site that implements it. A contract defines the full menu of methods and their I/O; manifests declare per-site subsets, and bindings implement them. Part of WebSiteMCP spec version 1.0.",
   "type": "object",
   "additionalProperties": false,
   "required": ["kind", "id", "version", "methods"],

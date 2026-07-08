@@ -1,8 +1,6 @@
 {
-  "$schema": "../../../schema/1.0/binding.json",
+  "$schema": "https://websitemcp.inferise.com/schema/1.0/binding.json",
   "kind": "binding",
-  "org": "svb",
-  "surface": "www",
   "contract": "banking",
   "satisfiesContract": "1.0",
   "version": "1.0",

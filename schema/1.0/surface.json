@@ -1,8 +1,0 @@
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://h2amacp.inferise.com/schema/1.0/surface.json",
-  "title": "H2A MCP Surface",
-  "description": "The closed vocabulary of interaction surfaces an org may expose. A surface names the medium an agent operates against; it is the second axis (after org) under which manifests and bindings are partitioned. Referenced by manifest.json and binding.json for their 'surface' field. Part of H2A spec version 1.0.",
-  "type": "string",
-  "enum": ["www", "app", "rest"]
-}

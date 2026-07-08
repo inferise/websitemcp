@@ -1,0 +1,3 @@
+# FUSE mount artifacts (transient, created when files are rewritten over a mount)
+.fuse_hidden*
+**/.fuse_hidden*

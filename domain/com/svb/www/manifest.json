@@ -1,10 +1,7 @@
 {
-  "$schema": "../../../schema/1.0/manifest.json",
+  "$schema": "https://websitemcp.inferise.com/schema/1.0/manifest.json",
   "kind": "manifest",
-  "org": "svb",
-  "surface": "www",
   "version": "1.0",
-  "entryPoint": "svb.com",
   "contracts": [
     {
       "id": "banking",

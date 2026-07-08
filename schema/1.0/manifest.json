@@ -1,34 +1,21 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://h2amacp.inferise.com/schema/1.0/manifest.json",
-  "title": "H2A MCP Manifest",
-  "description": "Meta-schema for an H2A manifest: the per-(org x surface) declaration of which contracts, which methods of each, and which binding version are live. The manifest's declared methods are the single source of truth for what is callable; a method the manifest omits never appears to the agent. Lives at org/<org>/<surface>/manifest.json. Part of H2A spec version 1.0.",
+  "$id": "https://websitemcp.inferise.com/schema/1.0/manifest.json",
+  "title": "WebSiteMCP Manifest",
+  "description": "Meta-schema for a WebSiteMCP manifest: the per-site declaration of which contracts, which methods of each, and which binding version are live. The manifest's declared methods are the single source of truth for what is callable; a method the manifest omits never appears in the tool surface. Lives at domain/<reverse-DNS path>/manifest.json (e.g. domain/com/svb/www/); the path is the site's identity. Part of WebSiteMCP spec version 1.0.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "org", "surface", "version", "contracts"],
+  "required": ["kind", "version", "contracts"],
   "properties": {
     "$schema": { "type": "string" },
     "kind": { "const": "manifest", "description": "Artifact discriminator." },
-    "org": {
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9-]*$",
-      "description": "Org identifier. Must match the org folder name under org/."
-    },
-    "surface": {
-      "$ref": "surface.json",
-      "description": "Interaction surface. Must match the surface folder name and be a member of the surface vocabulary."
-    },
     "version": {
       "$ref": "#/$defs/semver",
       "description": "Manifest version. Bumps when declared support changes or a contract/binding pin is re-pinned."
     },
-    "entryPoint": {
-      "type": "string",
-      "description": "Surface entry point: a domain for www, a bundle/app id for app, a base URL for rest."
-    },
     "contracts": {
       "type": "array",
-      "description": "The categories this org exposes on this surface, each pinned to an exact contract version and an exact binding version.",
+      "description": "The categories this site exposes, each pinned to an exact contract version and an exact binding version.",
       "minItems": 1,
       "items": { "$ref": "#/$defs/contractRef" }
     }
@@ -54,11 +41,11 @@
         },
         "binding": {
           "$ref": "#/$defs/semver",
-          "description": "Exact binding version to load. Resolves to org/<org>/<surface>/<id>@<binding>.json. Free to move under a fixed contract version."
+          "description": "Exact binding version to load. Resolves to <id>@<binding>.json beside this manifest. Free to move under a fixed contract version."
         },
         "methods": {
           "type": "array",
-          "description": "The subset of the contract's methods that are live on this surface. Must be a subset of the contract's methods and include the contract's required core. Becomes the callable tool list.",
+          "description": "The subset of the contract's methods that are live on this site. Must be a subset of the contract's methods and include the contract's required core. Becomes the callable tool list.",
           "minItems": 1,
           "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
           "uniqueItems": true

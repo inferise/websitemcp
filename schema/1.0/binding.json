@@ -1,16 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://h2amacp.inferise.com/schema/1.0/binding.json",
-  "title": "H2A MCP Binding",
-  "description": "Meta-schema for an H2A binding: a recording that implements a contract's methods for one (org x surface). A binding is authored once by recording in-page input, output, and actions; it is the concrete, private implementation the orchestrator runs. Lives at org/<org>/<surface>/<contract>@<version>.json. Part of H2A spec version 1.0.",
+  "$id": "https://websitemcp.inferise.com/schema/1.0/binding.json",
+  "title": "WebSiteMCP Binding",
+  "description": "Meta-schema for a WebSiteMCP binding: a recording that implements a contract's methods for one site. A binding is authored once by recording in-page input, output, and actions; it is the concrete, private, site-specific implementation of the contract. Lives at domain/<reverse-DNS path>/<contract>@<version>.json, beside the site's manifest. Part of WebSiteMCP spec version 1.0.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "org", "surface", "contract", "satisfiesContract", "version", "methods"],
+  "required": ["kind", "contract", "satisfiesContract", "version", "methods"],
   "properties": {
     "$schema": { "type": "string" },
     "kind": { "const": "binding", "description": "Artifact discriminator." },
-    "org": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "surface": { "$ref": "surface.json" },
     "contract": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*$",

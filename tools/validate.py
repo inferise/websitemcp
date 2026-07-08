@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""H2A conformance checker.
+"""WebSiteMCP conformance checker.
 
-Validates every org manifest and its bindings against the spec:
+Validates every site manifest and its bindings against the spec:
   * structural checks (kind, required fields, version/id patterns, path agreement)
-  * the cross-artifact invariants from spec/1.0.md section 12
+  * the cross-artifact invariants from spec/1.0.md section 9
 Resolves the shared contracts the manifest pins as needed.
 
 Zero required dependencies. If `jsonschema` is importable, each instance is
@@ -67,7 +67,7 @@ def build_schema_validators():
         return None
     reg = Registry()
     schemas = {}
-    for name in ("contract", "manifest", "binding", "surface"):
+    for name in ("contract", "manifest", "binding"):
         s = load(os.path.join(SCHEMA_DIR, f"{name}.json"))
         schemas[name] = s
         r = Resource.from_contents(s)
@@ -86,24 +86,19 @@ def schema_validate(kind, inst, label):
           + ("" if not errs else f" -> {list(errs[0].path)} {errs[0].message}"))
 
 
-# ---- surface vocabulary (sourced from the schema) --------------------------
-SURFACES = set(load(os.path.join(SCHEMA_DIR, "surface.json")).get("enum", []))
-
-
 def validate_manifest(mpath):
     rel = os.path.relpath(mpath, ROOT)
     print(f"\n== {rel} ==")
-    parts = rel.split(os.sep)  # org/<org>/<surface>/manifest.json
-    path_org = parts[1] if len(parts) >= 4 else None
-    path_surface = parts[2] if len(parts) >= 4 else None
-    org_dir = os.path.dirname(mpath)
+    parts = rel.split(os.sep)  # domain/<labels...>/manifest.json
+    labels = parts[1:-1]
+    host = ".".join(labels)  # reverse-DNS identity, derived from the path
+    site_dir = os.path.dirname(mpath)
 
     m = load(mpath)
     schema_validate("manifest", m, rel)
     check(m.get("kind") == "manifest", "manifest.kind == 'manifest'")
-    check(m.get("org") == path_org, f"manifest.org matches folder ({path_org})")
-    check(m.get("surface") == path_surface, f"manifest.surface matches folder ({path_surface})")
-    check(m.get("surface") in SURFACES, f"surface '{m.get('surface')}' in vocabulary {sorted(SURFACES)}")
+    check(len(labels) >= 2 and all(re.match(r"^[a-z0-9-]+$", p) for p in labels),
+          f"path is a reverse-DNS domain ({host})")
     check(bool(SEMVER.match(str(m.get("version", "")))), "manifest.version is MAJOR.MINOR")
     check(isinstance(m.get("contracts"), list) and m["contracts"], "manifest.contracts non-empty")
 
@@ -124,14 +119,12 @@ def validate_manifest(mpath):
         check(set(c.get("required", [])) <= mmethods, "INV2 contract.required ⊆ manifest.methods")
 
         # binding resolves
-        bpath = os.path.join(org_dir, f"{cid}@{bver}.json")
+        bpath = os.path.join(site_dir, f"{cid}@{bver}.json")
         if not check(os.path.exists(bpath), f"binding file resolves: {cid}@{bver}.json"):
             continue
         b = load(bpath)
         schema_validate("binding", b, os.path.relpath(bpath, ROOT))
         check(b.get("kind") == "binding", "binding.kind == 'binding'")
-        check(b.get("org") == path_org and b.get("surface") == path_surface,
-              "binding org/surface match folder")
         check(b.get("contract") == cid, "binding.contract matches filename")
         check(str(b.get("version")) == str(bver), "binding.version matches filename @version")
         check(b.get("satisfiesContract") == cver, "INV4 binding.satisfiesContract == manifest pin")
@@ -162,8 +155,8 @@ def validate_manifest(mpath):
 
 def main():
     manifests = []
-    org_root = os.path.join(ROOT, "org")
-    for dirpath, _, files in os.walk(org_root):
+    domain_root = os.path.join(ROOT, "domain")
+    for dirpath, _, files in os.walk(domain_root):
         if "manifest.json" in files:
             manifests.append(os.path.join(dirpath, "manifest.json"))
     manifests.sort()
@@ -171,7 +164,7 @@ def main():
     if VALIDATORS is None:
         print("note: 'jsonschema' not importable — running structural + invariant checks only")
     if not manifests:
-        print("no manifests found under org/")
+        print("no manifests found under domain/")
         return 1
 
     for mp in manifests:
